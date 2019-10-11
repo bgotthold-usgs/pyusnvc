@@ -7,6 +7,7 @@ from datetime import datetime
 import pycountry
 import json
 import numpy
+import math
 from elasticsearch import Elasticsearch
 
 usnvc_source_item = "5aa827a2e4b0b1c392ef337a"
@@ -279,6 +280,8 @@ def build_unit(element_global_id, db=None):
         d_thisSimilarUnits = thisSimilarUnits.to_dict("records")
         for d in d_thisSimilarUnits:
             d.update((k, int(v)) for k, v in d.items() if isinstance(v, numpy.int64))
+        for d in d_thisSimilarUnits:
+            d.update((k, None) for k, v in d.items() if isinstance(v, float) and math.isnan(v))
         unitDoc["Overview"]["Similar NVC Types"] = d_thisSimilarUnits
 
     if this_unit["hierarchyLevel"] in ["Class", "Subclass", "Formation", "Division"]:
