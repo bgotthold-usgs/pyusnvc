@@ -5,6 +5,9 @@ from zipfile import ZipFile
 import os
 from datetime import datetime
 import pycountry
+import json
+import numpy
+from elasticsearch import Elasticsearch
 
 usnvc_source_item = "5aa827a2e4b0b1c392ef337a"
 
@@ -16,6 +19,10 @@ def db_connection():
 
     :return: sqlite3 connection to the database
     """
+    probable_file_name = "NVC v2.02 2018-03.db"
+    if os.path.exists(probable_file_name):
+        return sqlite3.connect(probable_file_name)
+
     sb = SbSession()
 
     source_item = sb.get_item(usnvc_source_item)
@@ -28,10 +35,7 @@ def db_connection():
     if source_data_file is None:
         return None
 
-    probable_file_name = source_data_file["name"].replace(".zip", "")
-
-    if os.path.exists(probable_file_name):
-        return sqlite3.connect(probable_file_name)
+#    probable_file_name = source_data_file["name"].replace(".zip", "")
 
     zip_file = sb.download_file(
         source_data_file["url"],
@@ -224,7 +228,6 @@ def build_unit(element_global_id, db=None):
 
     # unitDoc template and initial properties
     unitDoc = {
-        "_id": element_global_id,
         "Date Processed": datetime.utcnow().isoformat(),
         "Identifiers": {
             "element_global_id": element_global_id,
@@ -273,7 +276,10 @@ def build_unit(element_global_id, db=None):
         db
     )
     if len(thisSimilarUnits.index) > 0:
-        unitDoc["Overview"]["Similar NVC Types"] = thisSimilarUnits.to_dict("records")
+        d_thisSimilarUnits = thisSimilarUnits.to_dict("records")
+        for d in d_thisSimilarUnits:
+            d.update((k, int(v)) for k, v in d.items() if isinstance(v, numpy.int64))
+        unitDoc["Overview"]["Similar NVC Types"] = d_thisSimilarUnits
 
     if this_unit["hierarchyLevel"] in ["Class", "Subclass", "Formation", "Division"]:
         unitDoc["Overview"]["Display Title"] = this_unit["classificationCode"] + " " + this_unit[
@@ -346,7 +352,7 @@ def build_unit(element_global_id, db=None):
         unitDoc["Distribution"]["1994 USFS Ecoregion Raw Data"] = thisUSFSDistribution1994.to_dict("records")
 
     thisUSFSDistribution2007 = pd.read_sql_query(
-        f"SELECT *\
+        f"SELECT d_usfs_ecoregion2007.*, d_occurrence_status.*\
         FROM UnitXEcoregionUsfs2007\
         JOIN d_usfs_ecoregion2007\
         ON UnitXEcoregionUsfs2007.usfs_ecoregion_2007_id = d_usfs_ecoregion2007.usfs_ecoregion_2007_id\
@@ -397,7 +403,7 @@ def build_unit(element_global_id, db=None):
 
     unitDoc["Hierarchy"]["parent_id"] = str(this_unit["PARENT_ID"])
     unitDoc["Hierarchy"]["hierarchyLevel"] = this_unit["hierarchyLevel"]
-    unitDoc["Hierarchy"]["d_classification_level_id"] = this_unit["D_CLASSIFICATION_LEVEL_ID"]
+    unitDoc["Hierarchy"]["d_classification_level_id"] = int(this_unit["D_CLASSIFICATION_LEVEL_ID"])
     unitDoc["Hierarchy"]["unitsort"] = this_unit["unitSort"]
     unitDoc["Hierarchy"]["parentkey"] = this_unit["parentKey"]
     unitDoc["Hierarchy"]["parentname"] = this_unit["parentName"]
@@ -460,4 +466,66 @@ def build_unit(element_global_id, db=None):
         unitDoc["ancestors"] = [int(0)]
 
     return unitDoc
+
+
+def cache_unit(element_global_id, cache_path='cache'):
+    """
+    Builds and caches a USNVC unit to a JSON document at a specified path.
+
+    :param element_global_id: Integer element_global_id value to build the unit from.
+    :param cache_path: accessible storage path
+    :return: None if the file already exists or True if the document is created and successfully cached
+    """
+    if os.path.exists(f'{cache_path}/{element_global_id}.json'):
+        return None
+
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
+
+    unit_doc = build_unit(element_global_id)
+
+    with open(f'{cache_path}/{element_global_id}.json', 'w') as f:
+        f.write(json.dumps(unit_doc))
+        f.close()
+
+    return True
+
+
+def index_unit(element_global_id, index_name="usnvc_units", doc_type="usnvc_unit"):
+    """
+    Builds and indexes a USNVC unit to a configured Elasticsearch host. This method will update an existing document
+    if the identifier (element_global_id) is already found.
+
+    :param element_global_id: Integer element_global_id value to build the unit from
+    :param index_name: Index name to store the document in Elasticsearch
+    :param doc_type: Document type for the Elasticsearch store
+    :return: Response from the Elasticsearch client indicating the operation conducted
+    """
+    es = Elasticsearch(
+        [
+            {
+                'host': os.environ["ES_HOST"],
+                'port': os.environ["ES_PORT"]
+            }
+        ],
+        http_auth=(
+            os.environ["ES_USER"],
+            os.environ["ES_PASSWORD"]
+        ),
+        scheme=os.environ["ES_SCHEME"]
+    )
+
+    if element_global_id == 0:
+        unit_doc = logical_nvcs_root()
+    else:
+        unit_doc = build_unit(element_global_id)
+
+    r_es = es.index(
+        index=index_name,
+        doc_type=doc_type,
+        id=element_global_id,
+        body=unit_doc
+    )
+
+    return r_es
 

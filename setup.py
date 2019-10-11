@@ -11,8 +11,10 @@ setup(
     packages=['pyusnvc'],
     install_requires=[
         'pandas',
+        'numpy',
         'sciencebasepy',
-        'pycountry'
+        'pycountry',
+        'elasticsearch'
     ],
     zip_safe=False
 )
