@@ -72,7 +72,7 @@ def get_place_code_data(abbreviation, uncertainty=False):
     Takes an abbreviation for a 2 character country code and uses the pycountry package to return the full name.
 
     :param abbreviation: Two-character country code
-    :param uncertainty: True/False value indicating if the country code for distribution is undertain
+    :param uncertainty: True/False value indicating if the country code for distribution is uncertain
     :return: Data object used to enhance the original list of countries for NVCS distribution
     """
     code_data = {
@@ -262,7 +262,7 @@ def build_unit(element_global_id, db=None):
     if type(this_unit["diagnosticCharacteristics"]) is str:
         unitDoc["Overview"]["Diagnostic Characteristics"] = clean_string(this_unit["diagnosticCharacteristics"])
     if type(this_unit["Rationale"]) is str:
-        unitDoc["Overview"]["Rationale for Nonimal Species or Physiognomic Features"] = clean_string(
+        unitDoc["Overview"]["Rationale for Nominal Species or Physiognomic Features"] = clean_string(
             this_unit["Rationale"])
     if type(this_unit["classificationComments"]) is str:
         unitDoc["Overview"]["Classification Comments"] = clean_string(this_unit["classificationComments"])
@@ -531,4 +531,3 @@ def index_unit(element_global_id, index_name="usnvc_units", doc_type="usnvc_unit
     )
 
     return r_es
-
