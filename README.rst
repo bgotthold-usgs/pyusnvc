@@ -31,6 +31,8 @@ It is recommended that you set up a discrete Python environment for this project
 
 ``pip install git+git://github.com/usgs-bcb/pyusnvc.git@master``
 
+The code is made to be imported into a Python script or Lambda function, and no command line argument approach has been added. Two example Python scripts are provided in the example_scripts folder showing how a serial or parallel process can be used to create a local cache of every USNVC Unit document.
+
 Provisional Software Statement
 ==============================
 
