@@ -517,7 +517,7 @@ def cache_unit(element_global_id, cache_path='cache'):
     unit_doc = build_unit(element_global_id)
 
     with open(f'{cache_path}/{element_global_id}.json', 'w') as f:
-        f.write(json.dumps(unit_doc))
+        f.write(json.dumps(unit_doc, indent=4))
         f.close()
 
     return True
