@@ -43,8 +43,16 @@ def db_connection(version=latest_version):
     if version_config is None:
         return None
 
-    sb = SbSession()
-    source_item = sb.get_item(version_config["id"])
+    if os.path.exists(f'{version_config["id"]}.json'):
+        with open(f'{version_config["id"]}.json', 'r') as f:
+            source_item = json.load(f)
+            f.close()
+    else:
+        sb = SbSession()
+        source_item = sb.get_item(version_config["id"])
+        with open(f'{version_config["id"]}.json', 'w') as f:
+            json.dump(source_item, f)
+            f.close()
 
     source_sb_file = next((f for f in source_item["files"] if f["title"] == version_config["source_title"]), None)
 
