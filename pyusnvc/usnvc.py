@@ -10,37 +10,54 @@ import numpy
 import math
 from elasticsearch import Elasticsearch
 
-usnvc_source_item = "5aa827a2e4b0b1c392ef337a"
+# There should be a better way of handling versions of the database export provided to USGS, but we currently
+# hard code this into a data structure as anything else could introduce issues.
+usnvc_source_items = [
+    {
+        "version": 2.02,
+        "id": "5aa827a2e4b0b1c392ef337a",
+        "source_title": "Source Data"
+    },
+    {
+        "version": 2.03,
+        "id": "5cb74a8ae4b0c3b0065d7b2d",
+        "source_title": "Source Data"
+    }
+]
+
+version_list = [i["version"] for i in usnvc_source_items]
+version_list.sort(reverse=True)
+latest_version = version_list[0]
 
 
-def db_connection():
+def db_connection(version=latest_version):
     """
     Makes a connection to the SQLite database by first getting the appropriate data file from the ScienceBase Item,
     checking to see if the file already exists in the local path, and downloading/unzipping if necessary.
 
+    :param version: Version of the database to work with
     :return: sqlite3 connection to the database
     """
-    probable_file_name = "NVC v2.02 2018-03.db"
+    version_config = next((i for i in usnvc_source_items if i["version"] == version), None)
+
+    if version_config is None:
+        return None
+
+    sb = SbSession()
+    source_item = sb.get_item(version_config["id"])
+
+    source_sb_file = next((f for f in source_item["files"] if f["title"] == version_config["source_title"]), None)
+
+    if source_sb_file is None:
+        return None
+
+    probable_file_name = source_sb_file["name"].replace(".zip", ".db")
     if os.path.exists(probable_file_name):
         return sqlite3.connect(probable_file_name)
 
-    sb = SbSession()
-
-    source_item = sb.get_item(usnvc_source_item)
-
-    source_data_file = next(
-        (
-            f for f in source_item["files"] if f["title"] == "Source Data" and f["contentType"] == "application/zip"
-        ),
-        None)
-    if source_data_file is None:
-        return None
-
-#    probable_file_name = source_data_file["name"].replace(".zip", "")
-
     zip_file = sb.download_file(
-        source_data_file["url"],
-        source_data_file["name"]
+        source_sb_file["url"],
+        source_sb_file["name"]
     )
 
     with ZipFile(zip_file, 'r') as zip_ref:
@@ -88,16 +105,17 @@ def get_place_code_data(abbreviation, uncertainty=False):
     return code_data
 
 
-def all_keys(db=None):
+def all_keys(db=None, version=latest_version):
     """
     Pulls together a list of all element_global_id keys from the USNVC source. This can be used to set up a message
     queue with all of the items to be processed.
 
     :param db: Database connection to the SQLite database; will create this if not provided
+    :param version: Version of the database to work with
     :return: List of all element_global_id values in the Unit table of the SQLite database
     """
     if db is None:
-        db = db_connection()
+        db = db_connection(version)
 
     identifiers = pd.read_sql_query(
         "SELECT element_global_id FROM Unit",
@@ -107,15 +125,16 @@ def all_keys(db=None):
     return identifiers["element_global_id"].tolist()
 
 
-def logical_nvcs_root(db=None):
+def logical_nvcs_root(db=None, version=latest_version):
     """
     Creates a logical root document with _id 0 for the root of the USNVC.
 
     :param db: Database connection to the SQLite database; will create this if not provided
+    :param version: Version of the database to work with
     :return: Dictionary with the bare minimum properties necessary to establish the root.
     """
     if db is None:
-        db = db_connection()
+        db = db_connection(version)
 
     classes = pd.read_sql_query(
         "SELECT element_global_id FROM Unit WHERE PARENT_ID IS NULL",
@@ -134,7 +153,7 @@ def logical_nvcs_root(db=None):
     }
 
 
-def build_hierarchy(element_global_id, db=None):
+def build_hierarchy(element_global_id, db=None, version=latest_version):
     """
     This function builds the hierarchy immediately above and below a given Unit.
 
@@ -144,7 +163,7 @@ def build_hierarchy(element_global_id, db=None):
     hierarchy, the unit for the provided element_global_id, and immediate children of the unit in the hierarchy
     """
     if db is None:
-        db = db_connection()
+        db = db_connection(version)
 
     full_hierarchy = list()
 
@@ -201,7 +220,7 @@ def build_hierarchy(element_global_id, db=None):
     }
 
 
-def build_unit(element_global_id, db=None):
+def build_unit(element_global_id, db=None, version=latest_version):
     """
     Main function that builds a given Unit from all the related data tables in the relational database as a single
     document for adding to a document database or indexing system. This function is designed to be run in a
@@ -209,12 +228,13 @@ def build_unit(element_global_id, db=None):
 
     :param element_global_id: Integer element_global_id value to build the unit from.
     :param db: Database connection to the SQLite database; will create this if not provided
+    :param version: Version of the database to work with
     :return: Dictionary object containing a logical set of high level properties patterned after the current online
     "USNVC Explorer" application. The structure is designed to provide a logical and human-readable view of the
     core information for a given unit.
     """
     if db is None:
-        db = db_connection()
+        db = db_connection(version)
 
     # Get requested unit by element_global_id
     this_unit = pd.read_sql_query(
@@ -340,19 +360,20 @@ def build_unit(element_global_id, db=None):
     if len(thisDistribution.index) > 0:
         unitDoc["Distribution"]["States/Provinces Raw Data"] = thisDistribution.to_dict("records")
 
-    thisUSFSDistribution1994 = pd.read_sql_query(
-        f"SELECT usfs_ecoregion_name, usfs_ecoregion_class_cd, usfs_ecoregion_concat_cd,\
-        occurrence_status_cd, occurrence_status_desc, display_value\
-        FROM UnitXEcoregionUsfs1994\
-        JOIN d_usfs_ecoregion1994\
-        ON UnitXEcoregionUsfs1994.usfs_ecoregion_id = d_usfs_ecoregion1994.usfs_ecoregion_id\
-        JOIN d_occurrence_status\
-        ON UnitXEcoregionUsfs1994.d_occurrence_status_id = d_occurrence_status.d_occurrence_status_id\
-        WHERE UnitXEcoregionUsfs1994.element_global_id = {element_global_id}",
-        db
-    )
-    if len(thisUSFSDistribution1994.index) > 0:
-        unitDoc["Distribution"]["1994 USFS Ecoregion Raw Data"] = thisUSFSDistribution1994.to_dict("records")
+    if version == 2.02:
+        thisUSFSDistribution1994 = pd.read_sql_query(
+            f"SELECT usfs_ecoregion_name, usfs_ecoregion_class_cd, usfs_ecoregion_concat_cd,\
+            occurrence_status_cd, occurrence_status_desc, display_value\
+            FROM UnitXEcoregionUsfs1994\
+            JOIN d_usfs_ecoregion1994\
+            ON UnitXEcoregionUsfs1994.usfs_ecoregion_id = d_usfs_ecoregion1994.usfs_ecoregion_id\
+            JOIN d_occurrence_status\
+            ON UnitXEcoregionUsfs1994.d_occurrence_status_id = d_occurrence_status.d_occurrence_status_id\
+            WHERE UnitXEcoregionUsfs1994.element_global_id = {element_global_id}",
+            db
+        )
+        if len(thisUSFSDistribution1994.index) > 0:
+            unitDoc["Distribution"]["1994 USFS Ecoregion Raw Data"] = thisUSFSDistribution1994.to_dict("records")
 
     thisUSFSDistribution2007 = pd.read_sql_query(
         f"SELECT d_usfs_ecoregion2007.*, d_occurrence_status.*\
