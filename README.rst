@@ -27,9 +27,15 @@ The package uses some basic Python tools in Python 3.x and above along with the 
 * sciencebasepy - Used for working with the source item in ScienceBase to retrieve the database.
 * pycountry - Used in the get_place_code_data() function to retrieve a full country name for the structure representing global distribution of a given USNVC unit.
 
-It is recommended that you set up a discrete Python environment for this project using your tool of choice. The install_requires section of the setup.py should create your dependencies for you on install. You can install from source with:
+It is recommended that you set up a discrete Python environment for this project using your tool of choice. The install_requires section of the setup.py should create your dependencies for you on install. You can install from source with a local clone or directly from the source repo with...
 
 ``pip install git+git://github.com/usgs-bcb/pyusnvc.git@master``
+
+...or...
+
+``pip install git+git://github.com/usgs-bcb/pyusnvc.git@develop``
+
+...for the latest.
 
 The code is made to be imported into a Python script or Lambda function, and no command line argument approach has been added. Two example Python scripts are provided in the example_scripts folder showing how a serial or parallel process can be used to create a local cache of every USNVC Unit document.
 
