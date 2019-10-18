@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyusnvc',
-    version='0.0.2',
+    version='0.0.3',
     description='Processing codes for building the USNVC distribution',
     url='http://github.com/usgs-bcb/pyusnvc',
     author='R. Sky Bristol',

@@ -277,6 +277,7 @@ def build_unit(element_global_id, db=None, version=latest_version):
         "Hierarchy": {},
         "Concept History": {},
         "Synonymy": {},
+        "State Crosswalk": {},
         "Authorship": {},
         "References": []
     }
@@ -496,6 +497,21 @@ def build_unit(element_global_id, db=None, version=latest_version):
         unitDoc["ancestors"] = this_hierarchy["Ancestors"]
     else:
         unitDoc["ancestors"] = [int(0)]
+
+    if version == 2.03:
+        state_crosswalks = pd.read_sql_query(
+            f"SELECT * FROM UnitCrosswalk\
+            JOIN d_subnation ON\
+            UnitCrosswalk.subnation_id = d_subnation.Subnation_id\
+            WHERE UnitCrosswalk.element_global_id = {element_global_id}",
+            db
+        )
+        if len(state_crosswalks.index) > 0:
+            unitDoc["State Crosswalk"]["Crosswalk Raw Data"] = state_crosswalks.to_dict("records")
+            unitDoc["State Crosswalk"]["States Using USNVC Type"] = [
+                i["Subnation_cd"] for i in unitDoc["State Crosswalk"]["Crosswalk Raw Data"]
+                if i["linkage"] == "1 direct" and i["ISO_Nation_cd"] == "US"
+            ]
 
     return unitDoc
 
