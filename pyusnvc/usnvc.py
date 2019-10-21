@@ -8,7 +8,6 @@ import pycountry
 import json
 import numpy
 import math
-from elasticsearch import Elasticsearch
 
 # There should be a better way of handling versions of the database export provided to USGS, but we currently
 # hard code this into a data structure as anything else could introduce issues.
@@ -29,14 +28,10 @@ version_list = [i["version"] for i in usnvc_source_items]
 version_list.sort(reverse=True)
 latest_version = version_list[0]
 
-
-def db_connection(version=latest_version):
+def get_sb_item(version=latest_version):
     """
-    Makes a connection to the SQLite database by first getting the appropriate data file from the ScienceBase Item,
+    Gets data file from the ScienceBase Item,
     checking to see if the file already exists in the local path, and downloading/unzipping if necessary.
-
-    :param version: Version of the database to work with
-    :return: sqlite3 connection to the database
     """
     version_config = next((i for i in usnvc_source_items if i["version"] == version), None)
 
@@ -61,7 +56,7 @@ def db_connection(version=latest_version):
 
     probable_file_name = source_sb_file["name"].replace(".zip", ".db")
     if os.path.exists(probable_file_name):
-        return sqlite3.connect(probable_file_name)
+        return 
 
     zip_file = sb.download_file(
         source_sb_file["url"],
@@ -73,11 +68,11 @@ def db_connection(version=latest_version):
         zip_ref.extractall()
         zip_ref.close()
 
+def db_connection(db_file):
     try:
         return sqlite3.connect(db_file)
     except:
         return None
-
 
 def clean_string(text):
     """
@@ -113,7 +108,7 @@ def get_place_code_data(abbreviation, uncertainty=False):
     return code_data
 
 
-def all_keys(db=None, version=latest_version):
+def all_keys(file_name):
     """
     Pulls together a list of all element_global_id keys from the USNVC source. This can be used to set up a message
     queue with all of the items to be processed.
@@ -122,8 +117,8 @@ def all_keys(db=None, version=latest_version):
     :param version: Version of the database to work with
     :return: List of all element_global_id values in the Unit table of the SQLite database
     """
-    if db is None:
-        db = db_connection(version)
+    
+    db = db_connection(file_name)
 
     identifiers = pd.read_sql_query(
         "SELECT element_global_id FROM Unit",
@@ -133,7 +128,7 @@ def all_keys(db=None, version=latest_version):
     return identifiers["element_global_id"].tolist()
 
 
-def logical_nvcs_root(db=None, version=latest_version):
+def logical_nvcs_root(file_name):
     """
     Creates a logical root document with _id 0 for the root of the USNVC.
 
@@ -141,8 +136,8 @@ def logical_nvcs_root(db=None, version=latest_version):
     :param version: Version of the database to work with
     :return: Dictionary with the bare minimum properties necessary to establish the root.
     """
-    if db is None:
-        db = db_connection(version)
+    db = db_connection(file_name)
+
 
     classes = pd.read_sql_query(
         "SELECT element_global_id FROM Unit WHERE PARENT_ID IS NULL",
@@ -161,7 +156,7 @@ def logical_nvcs_root(db=None, version=latest_version):
     }
 
 
-def build_hierarchy(element_global_id, db=None, version=latest_version):
+def build_hierarchy(element_global_id, file_name):
     """
     This function builds the hierarchy immediately above and below a given Unit.
 
@@ -170,8 +165,8 @@ def build_hierarchy(element_global_id, db=None, version=latest_version):
     :return: List of dictionaries containing the basic identification information for ancestors all the way up the
     hierarchy, the unit for the provided element_global_id, and immediate children of the unit in the hierarchy
     """
-    if db is None:
-        db = db_connection(version)
+    db = db_connection(file_name)
+
 
     full_hierarchy = list()
 
@@ -228,7 +223,7 @@ def build_hierarchy(element_global_id, db=None, version=latest_version):
     }
 
 
-def build_unit(element_global_id, db=None, version=latest_version):
+def build_unit(element_global_id, file_name, version=latest_version):
     """
     Main function that builds a given Unit from all the related data tables in the relational database as a single
     document for adding to a document database or indexing system. This function is designed to be run in a
@@ -241,8 +236,8 @@ def build_unit(element_global_id, db=None, version=latest_version):
     "USNVC Explorer" application. The structure is designed to provide a logical and human-readable view of the
     core information for a given unit.
     """
-    if db is None:
-        db = db_connection(version)
+    db = db_connection(file_name)
+
 
     # Get requested unit by element_global_id
     this_unit = pd.read_sql_query(
@@ -487,7 +482,7 @@ def build_unit(element_global_id, db=None, version=latest_version):
             "Full Citation": this_unit["FullCitation"]
         })
 
-    this_hierarchy = build_hierarchy(element_global_id, db)
+    this_hierarchy = build_hierarchy(element_global_id, file_name)
     unitDoc["Hierarchy"]["Cached Hierarchy"] = this_hierarchy["Hierarchy"]
 
     if len(this_hierarchy["Children"]) > 0:
@@ -516,7 +511,7 @@ def build_unit(element_global_id, db=None, version=latest_version):
     return unitDoc
 
 
-def cache_unit(element_global_id, cache_path='cache'):
+def cache_unit(element_global_id, cache_path=None, file_name=None):
     """
     Builds and caches a USNVC unit to a JSON document at a specified path.
 
@@ -524,55 +519,20 @@ def cache_unit(element_global_id, cache_path='cache'):
     :param cache_path: accessible storage path
     :return: None if the file already exists or True if the document is created and successfully cached
     """
-    if os.path.exists(f'{cache_path}/{element_global_id}.json'):
+    if cache_path and os.path.exists(f'{cache_path}/{element_global_id}.json'):
         return None
 
-    if not os.path.exists(cache_path):
+    if cache_path and not os.path.exists(cache_path):
         os.makedirs(cache_path)
 
-    unit_doc = build_unit(element_global_id)
+    unit_doc = build_unit(element_global_id, file_name)
 
-    with open(f'{cache_path}/{element_global_id}.json', 'w') as f:
-        f.write(json.dumps(unit_doc, indent=4))
-        f.close()
+    if cache_path:
+        with open(f'{cache_path}/{element_global_id}.json', 'w') as f:
+            f.write(json.dumps(unit_doc, indent=4))
+            f.close()
+        return True
+    return json.dumps(unit_doc, indent=4)
 
-    return True
 
 
-def index_unit(element_global_id, index_name="usnvc_units", doc_type="usnvc_unit"):
-    """
-    Builds and indexes a USNVC unit to a configured Elasticsearch host. This method will update an existing document
-    if the identifier (element_global_id) is already found.
-
-    :param element_global_id: Integer element_global_id value to build the unit from
-    :param index_name: Index name to store the document in Elasticsearch
-    :param doc_type: Document type for the Elasticsearch store
-    :return: Response from the Elasticsearch client indicating the operation conducted
-    """
-    es = Elasticsearch(
-        [
-            {
-                'host': os.environ["ES_HOST"],
-                'port': os.environ["ES_PORT"]
-            }
-        ],
-        http_auth=(
-            os.environ["ES_USER"],
-            os.environ["ES_PASSWORD"]
-        ),
-        scheme=os.environ["ES_SCHEME"]
-    )
-
-    if element_global_id == 0:
-        unit_doc = logical_nvcs_root()
-    else:
-        unit_doc = build_unit(element_global_id)
-
-    r_es = es.index(
-        index=index_name,
-        doc_type=doc_type,
-        id=element_global_id,
-        body=unit_doc
-    )
-
-    return r_es
