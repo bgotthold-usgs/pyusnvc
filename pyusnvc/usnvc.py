@@ -534,5 +534,39 @@ def cache_unit(element_global_id, cache_path=None, file_name=None):
         return True
     return json.dumps(unit_doc, indent=4)
 
+def index_unit(element_global_id, index_name="usnvc_units", doc_type="usnvc_unit"):
+    """
+    Builds and indexes a USNVC unit to a configured Elasticsearch host. This method will update an existing document
+    if the identifier (element_global_id) is already found.
+    :param element_global_id: Integer element_global_id value to build the unit from
+    :param index_name: Index name to store the document in Elasticsearch
+    :param doc_type: Document type for the Elasticsearch store
+    :return: Response from the Elasticsearch client indicating the operation conducted
+    """
+    es = Elasticsearch(
+        [
+            {
+                'host': os.environ["ES_HOST"],
+                'port': os.environ["ES_PORT"]
+            }
+        ],
+        http_auth=(
+            os.environ["ES_USER"],
+            os.environ["ES_PASSWORD"]
+        ),
+        scheme=os.environ["ES_SCHEME"]
+    )
 
+    if element_global_id == 0:
+        unit_doc = logical_nvcs_root()
+    else:
+        unit_doc = build_unit(element_global_id)
 
+    r_es = es.index(
+        index=index_name,
+        doc_type=doc_type,
+        id=element_global_id,
+        body=unit_doc
+    )
+
+    return r_es
