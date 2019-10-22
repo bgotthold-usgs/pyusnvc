@@ -1,4 +1,5 @@
 import os
+import json
 from pyusnvc.usnvc import *
 
 
@@ -58,7 +59,7 @@ def process_2(path, file_name, ch_ledger, send_final_result,
 
     file_name = file_name.replace('.zip','.db')
     element_global_id = previous_stage_result['element_global_id']
-    process_result = cache_unit(element_global_id, file_name=path + file_name)
+    process_result = json.loads(cache_unit(element_global_id, file_name=path + file_name))
 
     ch_ledger.log_change_event(str(element_global_id), 'Process',
                                'Process usnvc data',
