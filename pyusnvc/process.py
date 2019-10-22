@@ -46,8 +46,6 @@ def process_1(path, file_name, ch_ledger, send_final_result,
     for element_global_id in all_keys(path + file_name):
         send_to_stage({'element_global_id': element_global_id}, 2)
         count += 1
-        if(count == 10):  # testing
-            return 10
     return count
 
 
