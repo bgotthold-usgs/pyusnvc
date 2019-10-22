@@ -1,11 +1,13 @@
 import os
-from usnvc import *
+from pyusnvc.usnvc import *
 
 
 # # # # # # # # TO RUN THIS FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 # # See readme for more details.
-# path = '../'
+# from usnvc import *
+# path = './'
 # file_name = 'NVC v2.03 2019-03.zip'
+# get_sb_item()
 
 
 # def send_final_result(obj):
