@@ -1,9 +1,9 @@
-import pyusnvc
+from usnvc import *
 
 
 # # # # # # # # TO RUN THIS FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 # # See readme for more details.
-# path = './'
+# path = '../'
 # file_name = 'NVC v2.03 2019-03.db'
 
 
@@ -37,7 +37,7 @@ import pyusnvc
 def process_1(path, file_name, ch_ledger, send_final_result,
               send_to_stage, previous_stage_result):  
     count = 0
-    for element_global_id in pyusnvc.usnvc.all_keys(file_name):
+    for element_global_id in all_keys(path + file_name):
         send_to_stage({'element_global_id': element_global_id}, 2)
         count += 1
         if(count == 10):  # testing
@@ -52,7 +52,7 @@ def process_1(path, file_name, ch_ledger, send_final_result,
 def process_2(path, file_name, ch_ledger, send_final_result,
               send_to_stage, previous_stage_result):
     element_global_id = previous_stage_result['element_global_id']
-    process_result = pyusnvc.usnvc.cache_unit(element_global_id, file_name=file_name)
+    process_result = cache_unit(element_global_id, file_name=path + file_name)
 
     ch_ledger.log_change_event(str(element_global_id), 'Process',
                                'Process usnvc data',
