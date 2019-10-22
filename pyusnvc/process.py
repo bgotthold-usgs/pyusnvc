@@ -2,33 +2,33 @@ import os
 from usnvc import *
 
 
-# # # # # # # TO RUN THIS FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
-# See readme for more details.
-path = '../'
-file_name = 'NVC v2.03 2019-03.zip'
+# # # # # # # # TO RUN THIS FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
+# # See readme for more details.
+# path = '../'
+# file_name = 'NVC v2.03 2019-03.zip'
 
 
-def send_final_result(obj):
-    print(json.dumps(obj))
+# def send_final_result(obj):
+#     print(json.dumps(obj))
 
 
-def send_to_stage(obj, stage):
-    globals()['process_{}'.format(stage)](path, file_name,
-                                          ch_ledger(), send_final_result,
-                                          send_to_stage, obj)
+# def send_to_stage(obj, stage):
+#     globals()['process_{}'.format(stage)](path, file_name,
+#                                           ch_ledger(), send_final_result,
+#                                           send_to_stage, obj)
 
 
-class ch_ledger:
-    def log_change_event(self, change_id, change_name, change_description,
-                         function_name, source, result):
-        print('\n\n\n', change_id, change_name, change_description,
-              function_name, source, result, '\n\n\n')
+# class ch_ledger:
+#     def log_change_event(self, change_id, change_name, change_description,
+#                          function_name, source, result):
+#         print('\n\n\n', change_id, change_name, change_description,
+#               function_name, source, result, '\n\n\n')
 
 
-def main():
-    process_1(path, file_name, ch_ledger(),
-              send_final_result, send_to_stage, None)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# def main():
+#     process_1(path, file_name, ch_ledger(),
+#               send_final_result, send_to_stage, None)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # The first processing stage.
