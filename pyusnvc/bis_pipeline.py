@@ -9,6 +9,7 @@ import os
 import json
 import time
 from pyusnvc.usnvc import *
+version = 2.03
 
 
 # # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
