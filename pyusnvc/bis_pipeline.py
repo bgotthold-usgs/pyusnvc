@@ -1,15 +1,22 @@
+"""
+This script wraps the usnvc logic for use in the bis data pipline project.
+It can be run locally following the instructions below. It is not part of the usnvc
+analysis and core scientific functionality of this package.
+see https://github.com/bgotthold-usgs/bis_pipeline/blob/master/README.md for more details 
+"""
+
 import os
 import json
 import time
 from pyusnvc.usnvc import *
 
 
-# # # # # # # # TO RUN THIS FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
-# # See readme for more details.
-# from usnvc import *
+# # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
+
+# # file should exist here
 # path = './'
 # file_name = 'NVC v2.03 2019-03.zip'
-# get_sb_item()
+# version = 2.03
 
 
 # def send_final_result(obj):
@@ -42,11 +49,11 @@ from pyusnvc.usnvc import *
 def process_1(path, file_name, ch_ledger, send_final_result,
               send_to_stage, previous_stage_result):
 
-    file_name = file_name.replace('.zip','.db')
+    file_name = file_name.replace('.zip', '.db')
     count = 0
     for element_global_id in all_keys(path + file_name):
         send_to_stage({'element_global_id': element_global_id}, 2)
-        time.sleep(0.02) # 2 ms
+        time.sleep(0.02)  # 2 ms
         count += 1
     return count
 
@@ -57,9 +64,10 @@ def process_1(path, file_name, ch_ledger, send_final_result,
 def process_2(path, file_name, ch_ledger, send_final_result,
               send_to_stage, previous_stage_result):
 
-    file_name = file_name.replace('.zip','.db')
+    file_name = file_name.replace('.zip', '.db')
     element_global_id = previous_stage_result['element_global_id']
-    process_result = json.loads(cache_unit(element_global_id, file_name=path + file_name))
+    process_result = build_unit(
+        element_global_id, file_name=path + file_name, version_number=version)
 
     ch_ledger.log_change_event(str(element_global_id), 'Process',
                                'Process usnvc data',
@@ -70,8 +78,6 @@ def process_2(path, file_name, ch_ledger, send_final_result,
     send_final_result(final_result)
     return 1
 
+
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        pass
+    main()

@@ -1,11 +1,10 @@
-=======
-pyusnvc
-=======
+# pyusnvc
+
 
 The US National Vegetation Classification is the US national system for vegetation classification and mapping. This package helps to manage the data for a distribution provided by the USGS.
 
-Description
-===========
+## Description
+
 
 This package handles getting the source data for the USNVC provided by NatureServe and housed in a ScienceBase Item into a format for distribution via a REST API. We provide it as a package in order to support full transparency on what we are doing with the data and to serve as a building block for anyone else that may want to do something similar.
 
@@ -18,8 +17,8 @@ The core functions of the package include the following:
 
 Other functions, documented within the usnvc module, handle various parts of the database connection and unit assembly process.
 
-Dependencies
-============
+## Dependencies
+
 
 The package uses some basic Python tools in Python 3.x and above along with the following specific dependencies:
 
@@ -37,10 +36,11 @@ It is recommended that you set up a discrete Python environment for this project
 
 ...for the latest.
 
-The code is made to be imported into a Python script or Lambda function, and no command line argument approach has been added. Two example Python scripts are provided in the example_scripts folder showing how a serial or parallel process can be used to create a local cache of every USNVC Unit document.
 
-Provisional Software Statement
-==============================
+The code is made to be run in any environment. An example Python script is provided in the example_scripts folder showing to create a local cache of every USNVC Unit document.
+
+## Provisional Software Statement
+
 
 Under USGS Software Release Policy, the software codes here are considered preliminary, not released officially, and posted to this repo for informal sharing among colleagues.
 
