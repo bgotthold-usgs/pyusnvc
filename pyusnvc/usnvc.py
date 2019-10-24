@@ -221,11 +221,10 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
     }
 
     if change_log_function:
-        change_log_function(str(element_global_id), 'Create',
-                            'Create base usnvc unit doc',
-                            'build_unit', {}, unitDoc)
-        previous_unitDoc = copy.deepcopy(unitDoc)  
-
+        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+                            'Create', 'Create base usnvc unit doc',
+                            {}, unitDoc)
+        previous_unitDoc = copy.deepcopy(unitDoc)
 
     if type(this_unit["colloquialName"]) is str:
         unitDoc["Overview"]["Colloquial Name"] = this_unit["colloquialName"]
@@ -251,13 +250,12 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
     if type(this_unit["similarNVCtypesComments"]) is str:
         unitDoc["Overview"]["Similar NVC Type Comments"] = clean_string(
             this_unit["similarNVCtypesComments"])
-
+    
     if change_log_function:
-        change_log_function(str(element_global_id), 'Add data',
-                            'Add basic data to existing usnvc unit doc',
-                            'build_unit', previous_unitDoc, unitDoc)
-        previous_unitDoc = copy.deepcopy(unitDoc)  
-
+        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+                            'Add data', 'Add basic data to existing usnvc unit doc',
+                            {}, unitDoc)
+        previous_unitDoc = copy.deepcopy(unitDoc)
 
     thisSimilarUnits = pd.read_sql_query(
         f"SELECT * FROM UnitXSimilarUnit WHERE ELEMENT_GLOBAL_ID = {element_global_id}",
@@ -488,7 +486,8 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
                 if i["linkage"] == "1 direct" and i["ISO_Nation_cd"] == "US"
             ]
     if change_log_function:
-        change_log_function(str(element_global_id), 'Finish Unit Doc',
-                            'Finished building usnvc unit doc',
-                            'build_unit', previous_unitDoc, unitDoc)
+        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+                            'Finish Unit Doc', 'Finished building usnvc unit doc',
+                            {}, unitDoc)
+        previous_unitDoc = copy.deepcopy(unitDoc)
     return unitDoc
