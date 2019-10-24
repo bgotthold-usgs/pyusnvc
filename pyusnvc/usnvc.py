@@ -221,7 +221,7 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
     }
 
     if change_log_function:
-        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+        change_log_function(str(element_global_id), 'pyusnvc/usnvc.py', 'build_unit',
                             'Create', 'Create base usnvc unit doc',
                             previous_unitDoc, unitDoc)
         previous_unitDoc = copy.deepcopy(unitDoc)
@@ -252,7 +252,7 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
             this_unit["similarNVCtypesComments"])
     
     if change_log_function:
-        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+        change_log_function(str(element_global_id), 'pyusnvc/usnvc.py', 'build_unit',
                             'Add data', 'Add basic data to existing usnvc unit doc',
                             previous_unitDoc, unitDoc)
         previous_unitDoc = copy.deepcopy(unitDoc)
@@ -486,7 +486,7 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
                 if i["linkage"] == "1 direct" and i["ISO_Nation_cd"] == "US"
             ]
     if change_log_function:
-        change_log_function(str(element_global_id), 'usnvc.py', 'build_unit',
+        change_log_function(str(element_global_id), 'pyusnvc/usnvc.py', 'build_unit',
                             'Finish Unit Doc', 'Finished building usnvc unit doc',
                             previous_unitDoc, unitDoc)
         previous_unitDoc = copy.deepcopy(unitDoc)
