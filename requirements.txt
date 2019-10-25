@@ -3,3 +3,4 @@ numpy
 sciencebasepy
 pycountry
 elasticsearch
+genson
