@@ -14,7 +14,6 @@ setup(
         'numpy',
         'sciencebasepy',
         'pycountry',
-        'elasticsearch'
     ],
     zip_safe=False
 )
