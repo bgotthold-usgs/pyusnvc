@@ -12,35 +12,36 @@ from pyusnvc.usnvc import *
 version = 2.03
 
 
-# # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
+# # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 
-# # file should exist here
-# path = './'
-# file_name = 'NVC v2.03 2019-03.zip'
-# version = 2.03
-
-
-# def send_final_result(obj):
-#     print(json.dumps(obj))
+# file should exist here
+get_source_item()
+path = './'
+file_name = 'NVC v2.03 2019-03.zip'
+version = 2.03
 
 
-# def send_to_stage(obj, stage):
-#     globals()['process_{}'.format(stage)](path, file_name,
-#                                           ch_ledger(), send_final_result,
-#                                           send_to_stage, obj)
+def send_final_result(obj):
+    print(json.dumps(obj))
 
 
-# class ch_ledger:
-#     def log_change_event(self, change_id, file_name, function_name, change_name, change_description,
-#                          source, result):
-#         print('\n\n\n', change_id, change_name, file_name, function_name, change_description,
-#               source, result, '\n\n\n')
+def send_to_stage(obj, stage):
+    globals()['process_{}'.format(stage)](path, file_name,
+                                          ch_ledger(), send_final_result,
+                                          send_to_stage, obj)
 
 
-# def main():
-#     process_1(path, file_name, ch_ledger(),
-#               send_final_result, send_to_stage, None)
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+class ch_ledger:
+    def log_change_event(self, change_id, file_name, function_name, change_name, change_description,
+                         source, result):
+        print('\n\n\n', change_id, change_name, file_name, function_name, change_description,
+              source, result, '\n\n\n')
+
+
+def main():
+    process_1(path, file_name, ch_ledger(),
+              send_final_result, send_to_stage, None)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 # The first processing stage.
@@ -68,7 +69,7 @@ def process_2(path, file_name, ch_ledger, send_final_result,
     file_name = file_name.replace('.zip', '.db')
     element_global_id = previous_stage_result['element_global_id']
     process_result = build_unit(
-        element_global_id, file_name=path + file_name, version_number=version, change_log_function=ch_ledger.log_change_event)
+        element_global_id, source_data_filename=path + file_name, version_number=version, change_log_function=ch_ledger.log_change_event)
 
     final_result = {'source_data': process_result,
                     'row_id': str(element_global_id)}
