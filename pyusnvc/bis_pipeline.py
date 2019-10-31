@@ -15,6 +15,7 @@ version = 2.03
 # # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 
 # # file should exist here
+# get_source_item()
 # path = './'
 # file_name = 'NVC v2.03 2019-03.zip'
 # version = 2.03
@@ -68,7 +69,7 @@ def process_2(path, file_name, ch_ledger, send_final_result,
     file_name = file_name.replace('.zip', '.db')
     element_global_id = previous_stage_result['element_global_id']
     process_result = build_unit(
-        element_global_id, file_name=path + file_name, version_number=version, change_log_function=ch_ledger.log_change_event)
+        element_global_id, source_data_filename=path + file_name, version_number=version, change_log_function=ch_ledger.log_change_event)
 
     final_result = {'source_data': process_result,
                     'row_id': str(element_global_id)}
