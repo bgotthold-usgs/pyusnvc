@@ -1,22 +1,94 @@
 import pandas as pd
 import sqlite3
 import os
+from zipfile import ZipFile
+from sciencebasepy import SbSession
 from datetime import datetime
 import pycountry
 import json
 import numpy
 import math
 import copy
+from genson import SchemaBuilder
 
 """
 This script is the core usnvc package. Starting with sourcedata from ScienceBase,
 these functions extract transform and load the data into a human readable form.
 """
 
+def get_source_item(version=2.03, force=False):
+    """
+    Checks the local path for the ScienceBase Source item (cached as a JSON document) and updates as necessary.
+    Retrieves the ScienceBase Item and caches it as a document. Retrieves the data file from the ScienceBase Item, 
+    checking to see if the file already exists in the local path, and downloading/unzipping if necessary.
+ 
+    :param version: Which numbered version of the USNVC source to retrieve
+    :param force: Set to True to force cache of ScienceBase source info regardless of pre-existence
+    """
+    # 2 versions in ScienceBase at the moment. Need a way to consistently query ScienceBase for versions of source.
+    usnvc_source_items = [
+        {
+            "version": 2.02,
+            "id": "5aa827a2e4b0b1c392ef337a",
+            "source_title": "Source Data",
+            "file_name": "NVC v2.03 2019-03.db"
+        },
+        {
+            "version": 2.03,
+            "id": "5cb74a8ae4b0c3b0065d7b2d",
+            "source_title": "Source Data",
+            "file_name": "NVC v2.03 2019-03.db"
+        }
+    ]
 
-def db_connection(db_file):
+    version_config = next((i for i in usnvc_source_items if i["version"] == version), None)
+
+    if version_config is None:
+        raise ValueError("Version number does not correspond to a valid source item")
+
+    source_item_metadata_file = f'{version_config["id"]}.json'
+
+    if os.path.exists(f'{version_config["id"]}.json') and not force:
+        with open(source_item_metadata_file, 'r') as f:
+            source_item_metadata = json.load(f)
+            f.close()
+    else:
+        sb = SbSession()
+        source_item_metadata = sb.get_item(version_config["id"])
+        with open(source_item_metadata_file, 'w') as f:
+            json.dump(source_item_metadata, f)
+            f.close()
+
+    source_sb_file = next(
+        (f for f in source_item_metadata["files"] if f["title"] == version_config["source_title"]), None)
+
+    if source_sb_file is None:
+        raise ValueError("The source item metadata contained no reference to source data file")
+
+    # This is a clunky way of handling identification of the source data file
+    source_data_file = source_sb_file["name"].replace(".zip", ".db")
+
+    if not os.path.exists(source_data_file) or force:
+        zip_file = sb.download_file(
+            source_sb_file["url"],
+            source_sb_file["name"]
+        )
+
+        with ZipFile(zip_file, 'r') as zip_ref:
+            # Assumes only one file. Need to revisit this.
+            source_data_file = zip_ref.namelist()[0]
+            zip_ref.extractall()
+            zip_ref.close()
+    
+    return {
+        "source_item_metadata_filename": source_item_metadata_file, 
+        "source_data_filename": source_data_file
+    }
+
+
+def db_connection(source_data_filename):
     try:
-        return sqlite3.connect(db_file)
+        return sqlite3.connect(source_data_filename)
     except:
         return None
 
@@ -55,15 +127,15 @@ def get_place_code_data(abbreviation, uncertainty=False):
     return code_data
 
 
-def all_keys(file_name):
+def all_keys(source_data_filename):
     """
     Pulls together a list of all element_global_id keys from the USNVC source. This can be used to set up a message
     queue with all of the items to be processed.
 
-    :param file_name: location of source data
+    :param source_data_filename: location of source data
     :return: List of all element_global_id values in the Unit table of the SQLite database
     """
-    db = db_connection(file_name)
+    db = db_connection(source_data_filename)
 
     identifiers = pd.read_sql_query(
         "SELECT element_global_id FROM Unit",
@@ -73,14 +145,14 @@ def all_keys(file_name):
     return identifiers["element_global_id"].tolist()
 
 
-def logical_nvcs_root(file_name):
+def logical_nvcs_root(source_data_filename):
     """
     Creates a logical root document with _id 0 for the root of the USNVC.
 
-    ::param file_name: location of source data
+    ::param source_data_filename: location of source data
     :return: Dictionary with the bare minimum properties necessary to establish the root.
     """
-    db = db_connection(file_name)
+    db = db_connection(source_data_filename)
 
     classes = pd.read_sql_query(
         "SELECT element_global_id FROM Unit WHERE PARENT_ID IS NULL",
@@ -99,16 +171,16 @@ def logical_nvcs_root(file_name):
     }
 
 
-def build_hierarchy(element_global_id, file_name):
+def build_hierarchy(element_global_id, source_data_filename):
     """
     This function builds the hierarchy immediately above and below a given Unit.
 
     :param element_global_id: Integer element_global_id value to build the hierarchy around.
-    ::param file_name: location of source data
+    ::param source_data_filename: location of source data
     :return: List of dictionaries containing the basic identification information for ancestors all the way up the
     hierarchy, the unit for the provided element_global_id, and immediate children of the unit in the hierarchy
     """
-    db = db_connection(file_name)
+    db = db_connection(source_data_filename)
 
     full_hierarchy = list()
 
@@ -165,21 +237,21 @@ def build_hierarchy(element_global_id, file_name):
     }
 
 
-def build_unit(element_global_id, file_name, version_number, change_log_function=None):
+def build_unit(element_global_id, source_data_filename, version_number, change_log_function=None):
     """
     Main function that builds a given Unit from all the related data tables in the relational database as a single
     document for adding to a document database or indexing system. This function is designed to be run in a
     multi-processing mode against a list of IDs or set of messages in a queue.
 
     :param element_global_id: Integer element_global_id value to build the unit from.
-    :param file_name: location of source data
+    :param source_data_filename: location of source data
     :param version_number: do some specific processing based on version
     :param change_log_function: Optional function to log document providence 
     :return: Dictionary object containing a logical set of high level properties patterned after the current online
     "USNVC Explorer" application. The structure is designed to provide a logical and human-readable view of the
     core information for a given unit.
     """
-    db = db_connection(file_name)
+    db = db_connection(source_data_filename)
 
     # Get requested unit by element_global_id
     this_unit = pd.read_sql_query(
@@ -307,7 +379,6 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
         unitDoc["Distribution"]["Nations"] = {
             "Raw List": this_unit["Nations"], "Nation Info": []}
         for nation in this_unit["Nations"].split(","):
-            thisNation = {"Abbreviation": nation.replace("?", "").strip()}
             if nation.endswith("?"):
                 placeCodeUncertainty = True
             else:
@@ -460,7 +531,7 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
             "Full Citation": this_unit["FullCitation"]
         })
 
-    this_hierarchy = build_hierarchy(element_global_id, file_name)
+    this_hierarchy = build_hierarchy(element_global_id, source_data_filename)
     unitDoc["Hierarchy"]["Cached Hierarchy"] = this_hierarchy["Hierarchy"]
 
     if len(this_hierarchy["Children"]) > 0:
@@ -491,3 +562,53 @@ def build_unit(element_global_id, file_name, version_number, change_log_function
                             previous_unitDoc, unitDoc)
         previous_unitDoc = copy.deepcopy(unitDoc)
     return unitDoc
+
+
+def get_schema(source_data_filename, cache_file=True, schema_path=None, schema_file=None, force=False):
+    """
+    Retrieves the schema documentation (JSON Schema) or builds it if it doesn't exist (or forced).
+    Schema build process will run through all documents to ensure that we fully sample the dataset.
+
+    :param source_data_filename: Filename of the source data
+    :param cache_file: If true, caches the JSON schema as a JSON document
+    :param schema_path: Location where the schema file should be cached; defaults to the resources path within the pyusnvc package
+    :param schema_file: Filename of the JSON schema file; required if cache_file is true
+    :param force: Can force the re-creation of the schema file if necessary
+    :return: Returns a Python dictionary object containing the JSON Schema created with the genson package.
+    This is a barebones schema with just the basic data structure in place. It needs to be further developed
+    with full documentation, but the basic version can be used as a simple data validator.
+    """
+    if cache_file:
+        if schema_file is None:
+            raise ValueError("You must supply a schema_file name in order to cache the schema to a file")
+        if schema_path is None:
+            resources_folder = os.path.join(os.path.dirname(__file__), 'resources')
+            schema_path = os.path.join(resources_folder, schema_file)
+        else:
+            schema_path = os.path.join(schema_path, schema_file)
+
+    if os.path.exists(schema_path) and not force:
+        with open(schema_path, 'r') as f:
+            schema = json.load(f)
+            f.close()
+        return schema
+
+    builder = SchemaBuilder()
+    builder.add_schema({"type": "object", "properties": {}})
+    for element_global_id in all_keys(source_data_filename):
+        builder.add_object(
+            build_unit(
+                element_global_id,
+                source_data_filename,
+                2.03
+            )
+        )
+
+    schema = builder.to_schema()
+
+    if cache_file:
+        with open(schema_path, 'w') as f:
+            json.dump(schema, f)
+            f.close()
+
+    return schema

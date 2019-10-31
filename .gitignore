@@ -50,7 +50,6 @@ MANIFEST
 .venv*/
 
 # datafiles and cache
-*.json
 *.db
 *.zip
 __pycache__
