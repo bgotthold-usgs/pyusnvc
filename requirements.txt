@@ -1,0 +1,6 @@
+pandas
+numpy
+sciencebasepy
+pycountry
+elasticsearch
+genson

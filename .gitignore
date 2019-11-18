@@ -48,3 +48,8 @@ MANIFEST
 
 # Per-project virtualenvs
 .venv*/
+
+# datafiles and cache
+*.db
+*.zip
+__pycache__

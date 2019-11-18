@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyusnvc',
-    version='0.0.3',
+    version='0.0.4',
     description='Processing codes for building the USNVC distribution',
     url='http://github.com/usgs-bcb/pyusnvc',
     author='R. Sky Bristol',
@@ -14,7 +14,7 @@ setup(
         'numpy',
         'sciencebasepy',
         'pycountry',
-        'elasticsearch'
+        'genson',
     ],
     zip_safe=False
 )
