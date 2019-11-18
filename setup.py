@@ -9,7 +9,7 @@ setup(
     author_email='bcb@usgs.gov',
     license='unlicense',
     packages=['pyusnvc'],
-    data_files=[('pyusnvc', ['resources/*.json'])],
+    data_files=[('pyusnvc', ['pyusnvc/resources/usnvc_unit_schema_2.03.json'])],
     include_package_data=True,
     install_requires=[
         'pandas',
