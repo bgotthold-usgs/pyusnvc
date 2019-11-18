@@ -10,7 +10,7 @@ setup(
     author_email='bcb@usgs.gov',
     license='unlicense',
     packages=['pyusnvc'],
-    data_files=[('pyusnvc', glob.glob('pyusnvc/*'))],
+    data_files=[('pyusnvc', glob.glob('pyusnvc/**'))],
     include_package_data=True,
     install_requires=[
         'pandas',
