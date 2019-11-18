@@ -9,8 +9,11 @@ import os
 import json
 import time
 from pyusnvc.usnvc import *
-version = 2.03
 
+version = 2.03
+output_schema = None
+with open(os.path.join(os.path.dirname(__file__), './resources/usnvc_unit_schema_2.03.json'), 'r') as schema:
+    output_schema = schema.read()
 
 # # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 
