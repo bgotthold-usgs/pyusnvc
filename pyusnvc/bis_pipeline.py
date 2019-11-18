@@ -12,8 +12,11 @@ from pyusnvc.usnvc import *
 
 version = 2.03
 json_schema = None
-with open(os.path.join(os.path.dirname(__file__), './resources/usnvc_unit_schema_2.03.json'), 'r') as json_schema_file:
-    json_schema = json.load(json_schema_file)
+try:
+    with open(os.path.join(os.path.dirname(__file__), './usnvc_unit_schema_2.03.json'), 'r') as json_schema_file:
+        json_schema = json.load(json_schema_file)
+except FileNotFoundError as e:
+    pass
 
 # # # # # # # # TO RUN THIS BIS PIPELINE FILE LOCALLY UNCOMMENT BELOW # # # # # # # # #
 
@@ -22,6 +25,8 @@ with open(os.path.join(os.path.dirname(__file__), './resources/usnvc_unit_schema
 # path = './'
 # file_name = 'NVC v2.03 2019-03.zip'
 # version = 2.03
+# # with open(os.path.join(os.path.dirname(__file__), './resources/usnvc_unit_schema_2.03.json'), 'r') as json_schema_file:
+# #     json_schema = json.load(json_schema_file)
 
 
 # def send_final_result(obj):
