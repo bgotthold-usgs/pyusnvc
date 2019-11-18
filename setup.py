@@ -10,6 +10,7 @@ setup(
     license='unlicense',
     packages=['pyusnvc'],
     data_files=[('pyusnvc', ['pyusnvc/resources/*.json'])],
+    include_package_data=True,
     install_requires=[
         'pandas',
         'numpy',
