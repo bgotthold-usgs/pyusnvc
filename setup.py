@@ -9,6 +9,7 @@ setup(
     author_email='bcb@usgs.gov',
     license='unlicense',
     packages=['pyusnvc'],
+    include_package_data=True
     install_requires=[
         'pandas',
         'numpy',
