@@ -79,7 +79,7 @@ def process_2(path, file_name, ch_ledger, send_final_result,
     process_result = build_unit(
         element_global_id, source_data_filename=path + file_name, version_number=version, change_log_function=ch_ledger.log_change_event)
 
-    final_result = {'source_data': process_result,
+    final_result = {'data': process_result,
                     'row_id': str(element_global_id)}
     send_final_result(final_result)
     return 1
