@@ -63,10 +63,8 @@ def process_1(path, file_name, ch_ledger, send_final_result,
     count = 0
     for element_global_id in all_keys(path + file_name):
         send_to_stage({'element_global_id': element_global_id}, 2)
-        time.sleep(0.02)  # 2 ms
+        #time.sleep(0.02)  # 2 ms
         count += 1
-        if count == 10:
-            return count
     return count
 
 
